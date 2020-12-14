@@ -98,7 +98,11 @@ const useAnimation = ({ clapEl, countEl, clapTotalEl }) => {
 const MediumClapContext = React.createContext();
 const { Provider } = MediumClapContext;
 
-const MediumClap = ({ children, handleClap, style: userStyles = {}, className }) => {
+const MediumClap = ({ children, 
+                      handleClap, 
+                      values = null, 
+                      style: userStyles = {}, 
+                      className }) => {
   const initialState = {
     isClicked: false,
     count: 0,
@@ -135,31 +139,40 @@ const MediumClap = ({ children, handleClap, style: userStyles = {}, className })
   let isFirstTime = useRef(true);
 
   useEffect(() => {
-    if (!isFirstTime.current) {
-      console.log("use effect called");
+    if (!isFirstTime.current && !isControlled) {
       handleClap && handleClap(clapState);
     }
 
     isFirstTime.current = false;
-  }, [count])
+  }, [count, isControlled, handleClap])
+
+  // is controlled component?
+  const isControlled = !!values && handleClap;
 
   const handleClapClick = () => {
     animationTimeline.replay();
-    setClapState({
-      isClicked: true,
-      count: count < MAXIMUM_USER_CLAP ? count + 1 : count,
-      countTotal: countTotal < MAXIMUM_USER_CLAP ? countTotal + 1 : countTotal,
-    });
+    isControlled 
+      ? handleClap() 
+      : setClapState({
+          isClicked: true,
+          count: count < MAXIMUM_USER_CLAP ? count + 1 : count,
+          countTotal: countTotal < MAXIMUM_USER_CLAP ? countTotal + 1 : countTotal,
+        });
   };
+
+  // if is controlled we take the state passed down to component
+  // if not we use the internal state
+  const getState = () => isControlled ? values : clapState
 
   const memoizedValue = useMemo(() => {
     return {
-      ...clapState, setRef
+      ...getState(), 
+      setRef
     }
-  }, [clapState, setRef]);
+  }, [isControlled, values, clapState, setRef]);
 
   // use array to concatenate string is better than
-  // use string contatenation inside html like code in jsk
+  // use string concatenation inside html like code in jsk
   // it's cleaner
   const classes = [styles.clap, className].join(' ').trim();
 
@@ -184,14 +197,41 @@ const MediumClap = ({ children, handleClap, style: userStyles = {}, className })
 };
 
 const Usage = () => {
-  const [count, setCount] = useState(0);
-  const handleClap = (clapState) => {
-    setCount(clapState.count);
+
+  const initialState = {
+    isClicked: false,
+    count: 0,
+    countTotal: 2000,
+  };
+
+
+  const [state, setState] = useState(initialState);
+
+  const MAXIMUM_USER_CLAP = 4000;
+  const {isClicked, count, countTotal} = state;
+  const handleClap = () => {
+    setState({
+      isClicked: true,
+      count: count < MAXIMUM_USER_CLAP ? count + 1 : count,
+      countTotal: countTotal < MAXIMUM_USER_CLAP ? countTotal + 1 : countTotal,
+    })  
   }
+
+
+  // {
+  //   isClicked: true,
+  //   count: count < MAXIMUM_USER_CLAP ? count + 1 : count,
+  //   countTotal: countTotal < MAXIMUM_USER_CLAP ? countTotal + 1 : countTotal,
+  // }
 
   return (
     <div style={{width: '100%'}}>
-      <MediumClap handleClap={handleClap} className={userCustomStyles.clap}>
+      <MediumClap values={state} handleClap={handleClap} className={userCustomStyles.clap}>
+        <ClapIcon className={userCustomStyles.icon} />
+        <ClapCount className={userCustomStyles.count} />
+        <CountTotal className={userCustomStyles.total} />
+      </MediumClap>
+      <MediumClap values={state} handleClap={handleClap} className={userCustomStyles.clap}>
         <ClapIcon className={userCustomStyles.icon} />
         <ClapCount className={userCustomStyles.count} />
         <CountTotal className={userCustomStyles.total} />
