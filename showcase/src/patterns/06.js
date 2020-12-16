@@ -91,6 +91,20 @@ const useAnimation = ({ clapEl, countEl, clapTotalEl }) => {
   return animationTimeline;
 };
 
+const useDomRef = () => {
+
+  const [DOMRef, setRefState] = useState({});
+
+  const setRef = useCallback((node) => {
+    setRefState((prevRefState) => ({
+      ...prevRefState,
+      [node.dataset.refkey]: node,
+    }));
+  }, []);
+
+  return [DOMRef, setRef]
+}
+
 const MediumClap = () => {
   const initialState = {
     isClicked: false,
@@ -101,15 +115,7 @@ const MediumClap = () => {
   const MAXIMUM_USER_CLAP = 12;
   const [clapState, setClapState] = useState(initialState);
   const { count, countTotal, isClicked } = clapState;
-
-  const [{ clapRef, clapCountRef, clapTotalRef }, setRefState] = useState({});
-
-  const setRef = useCallback((node) => {
-    setRefState((prevRefState) => ({
-      ...prevRefState,
-      [node.dataset.refkey]: node,
-    }));
-  }, []);
+  const [{ clapRef, clapCountRef, clapTotalRef }, setRef] = useDomRef();
 
   const animationTimeline = useAnimation({
     clapEl: clapRef,
