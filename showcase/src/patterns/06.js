@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import mojs from "mo-js";
 
 import styles from "./index.css";
@@ -105,6 +105,36 @@ const useDomRef = () => {
   return [DOMRef, setRef]
 }
 
+const useClapState = (initialState) => {
+  const [clapState, setClapState] = useState(initialState);
+  const { count, countTotal } = clapState;
+  const MAXIMUM_USER_CLAP = 12;
+
+  const updateClapState = useCallback(() => {
+    setClapState({
+      isClicked: true,
+      count: count < MAXIMUM_USER_CLAP ? count + 1 : count,
+      countTotal: countTotal < MAXIMUM_USER_CLAP ? countTotal + 1 : countTotal,
+    });
+  },[count, countTotal])
+
+  return [clapState, updateClapState];
+}
+
+const useEffectAfterMount = (cb, deps) => {
+  let isFirstTime = useRef(true);
+
+  useEffect(() => {
+    if (!isFirstTime.current) {
+      console.log("use effect called");
+       return cb();
+    }
+
+    isFirstTime.current = false;
+  }, deps) 
+}
+
+
 const MediumClap = () => {
   const initialState = {
     isClicked: false,
@@ -112,8 +142,8 @@ const MediumClap = () => {
     countTotal: 267,
   };
 
-  const MAXIMUM_USER_CLAP = 12;
-  const [clapState, setClapState] = useState(initialState);
+  //const MAXIMUM_USER_CLAP = 12;
+  const [clapState, updateClapState] = useClapState(initialState);
   const { count, countTotal, isClicked } = clapState;
   const [{ clapRef, clapCountRef, clapTotalRef }, setRef] = useDomRef();
 
@@ -123,21 +153,21 @@ const MediumClap = () => {
     clapTotalEl: clapTotalRef,
   });
 
-  const handleClapClick = () => {
+  // const handleClapClick = () => {
+  //   animationTimeline.replay();
+  //   updateClapState();
+  // };
+
+  useEffectAfterMount(() => {
     animationTimeline.replay();
-    setClapState({
-      isClicked: true,
-      count: count < MAXIMUM_USER_CLAP ? count + 1 : count,
-      countTotal: countTotal < MAXIMUM_USER_CLAP ? countTotal + 1 : countTotal,
-    });
-  };
+  }, [count]);
 
   return (
     <button
       ref={setRef}
       data-refkey="clapRef"
       className={styles.clap}
-      onClick={handleClapClick}
+      onClick={updateClapState}
     >
       <ClapIcon isClicked={isClicked} setRef={setRef} />
       <ClapCount count={count} setRef={setRef} />
