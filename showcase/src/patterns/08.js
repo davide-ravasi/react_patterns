@@ -118,17 +118,25 @@ const useClapState = (initialState) => {
     });
   },[count, countTotal])
 
-  const togglerProps = {
-    onClick: updateClapState,
-    'aria-pressed': clapState.isClicked
+  const handleMultipleClicks = (...fns) => (...args) => {
+    fns.forEach(fns => {
+      fns && fns(args);
+    });
   }
 
-  const counterProps = {
+  const togglerProps = ({onClick, ...otherProps}) => ({
+    onClick: handleMultipleClicks(updateClapState,onClick),
+    'aria-pressed': clapState.isClicked,
+    ...otherProps
+  })
+
+  const counterProps = ({...otherProps}) => ({
     count,
     'aria-valuemax': MAXIMUM_USER_CLAP,
     'aria-valuemin': 0,
-    'aria-valuenow': count
-  }
+    'aria-valuenow': count,
+    ...otherProps
+  })
 
   return {clapState, updateClapState, togglerProps, counterProps};
 }
@@ -173,14 +181,22 @@ const Usage = () => {
     animationTimeline.replay();
   }, [count]);
 
+  const newClick = () => {
+    console.log('click');
+  }
+
+  const togglerPropsNew = {
+    onClick: newClick
+  }
+
   return (
     <ClapContainer
       setRef={setRef}
-      {...togglerProps}
+      {...togglerProps(togglerPropsNew)}
       data-refkey="clapRef"
     >
       <ClapIcon isClicked={isClicked} setRef={setRef} />
-      <ClapCount {...counterProps} setRef={setRef}  data-refkey="clapCountRef" />
+      <ClapCount {...counterProps()} setRef={setRef}  data-refkey="clapCountRef" />
       <CountTotal countTotal={countTotal} setRef={setRef} data-refkey="clapTotalRef" />
     </ClapContainer>
   );
