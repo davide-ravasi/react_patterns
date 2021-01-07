@@ -105,8 +105,25 @@ const useDomRef = () => {
   return [DOMRef, setRef]
 }
 
+
+// Hook
+const usePrevious = (value) => {
+  // The ref object is a generic container whose current property is mutable ...
+  // ... and can hold any value, similar to an instance property on a class
+  const ref = useRef();
+  
+  // Store current value in ref
+  useEffect(() => {
+    ref.current = value;
+  }, [value]); // Only re-run if value changes
+  
+  // Return previous value (happens before update in useEffect above)
+  return ref.current;
+}
+
 const useClapState = (initialState) => {
   const [clapState, setClapState] = useState(initialState);
+  const initStateRef = useRef(initialState);
   const { count, countTotal } = clapState;
   const MAXIMUM_USER_CLAP = 12;
 
@@ -124,6 +141,16 @@ const useClapState = (initialState) => {
     });
   }
 
+  const resetRef = useRef(0);
+  const prevCount = usePrevious(count);
+
+  const reset = useCallback(() => {
+    if(prevCount != count ) {
+      setClapState(initStateRef.current);
+      resetRef.current++;
+    }
+  }, [prevCount, count, setClapState] );
+
   const togglerProps = ({onClick, ...otherProps}) => ({
     onClick: handleMultipleClicks(updateClapState,onClick),
     'aria-pressed': clapState.isClicked,
@@ -138,7 +165,7 @@ const useClapState = (initialState) => {
     ...otherProps
   })
 
-  return {clapState, updateClapState, togglerProps, counterProps};
+  return {clapState, updateClapState, togglerProps, counterProps, reset, resetDep: resetRef.current };
 }
 
 const useEffectAfterMount = (cb, deps) => {
@@ -154,15 +181,21 @@ const useEffectAfterMount = (cb, deps) => {
   }, deps) 
 }
 
-const Usage = () => {
-  const initialState = {
-    isClicked: false,
-    count: 0,
-    countTotal: 267,
-  };
+const initialState = {
+  isClicked: false,
+  count: 0,
+  countTotal: 267,
+};
 
+const userInitialState = {
+  isClicked: true,
+  count: 4,
+  countTotal: 1000,
+};
+
+const Usage = () => {
   //const MAXIMUM_USER_CLAP = 12;
-  const {clapState, updateClapState, togglerProps, counterProps} = useClapState(initialState);
+  const {clapState, updateClapState, togglerProps, counterProps, reset, resetDep} = useClapState(userInitialState);
   const { count, countTotal, isClicked } = clapState;
   const [{ clapRef, clapCountRef, clapTotalRef }, setRef] = useDomRef();
 
@@ -181,6 +214,18 @@ const Usage = () => {
     animationTimeline.replay();
   }, [count]);
 
+  const [uploadingReset, setUpload] = useState(false);
+
+  useEffectAfterMount(() => {
+    setUpload(true)
+
+    const id = setTimeout(() => {
+      setUpload(false)
+    },3000);
+
+    return () => clearTimeout(id);
+  }, [resetDep])
+
   const newClick = () => {
     console.log('click');
   }
@@ -190,6 +235,7 @@ const Usage = () => {
   }
 
   return (
+    <div>
     <ClapContainer
       setRef={setRef}
       {...togglerProps(togglerPropsNew)}
@@ -199,6 +245,14 @@ const Usage = () => {
       <ClapCount {...counterProps()} setRef={setRef}  data-refkey="clapCountRef" />
       <CountTotal countTotal={countTotal} setRef={setRef} data-refkey="clapTotalRef" />
     </ClapContainer>
+    <pre className={styles.resetMsg}>
+      <button onClick={reset}>Reset</button>
+      {JSON.stringify(clapState)}
+    </pre>
+    <pre className={styles.resetMsg}>
+      {uploadingReset ? `uploading reset ${resetDep} ...` : ''}
+    </pre>
+    </div>
   );
 };
 
